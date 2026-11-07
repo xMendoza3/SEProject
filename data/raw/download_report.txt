@@ -1,0 +1,12 @@
+=== book info (table of contents + page map) ===
+already downloaded, skipping: data\raw\turath_9849_info.json
+valid JSON, top-level keys:
+  meta                 dict   12
+  indexes              dict   7
+
+=== book file (all pages) ===
+already downloaded, skipping: data\raw\turath_9849_book.json
+valid JSON, top-level keys:
+  ً                    dict   12
+  ٘                    dict   7
+  pages                list   2230
