@@ -26,6 +26,23 @@ def test_search_respects_selected_madhabs(controller):
     assert results.titles == {2: "صلاة التراويح: حكمها، ووقتها"}
 
 
+# كل قول في النتائج معه مقتطف حول كلمة البحث، والكلمة نفسها بحركاتها من الأصل.
+def test_search_gives_excerpts_around_the_match(controller):
+    results = controller.receive_query("قالوا", [4])
+    excerpt = results.excerpts[results.opinions[0].opinion_id]
+    assert DatabaseManager._normalize(excerpt.match) == "قالوا"
+
+
+# البحث يتجاهل الحركات والهمزات، والمقتطف يرجع النص الأصلي كما هو.
+def test_excerpt_finds_match_ignoring_diacritics():
+    text = "كلام قبل " * 30 + "وَالصَّلَاةُ مشروعة" + " وكلام بعد" * 30
+    excerpt = ExplorerController.excerpt(text, "الصلاه")
+    assert excerpt.match == "الصَّلَاةُ"
+    assert excerpt.before.startswith("…") and excerpt.after.endswith("…")
+    assert len(excerpt.before) < 120 and len(excerpt.after) < 120
+    assert ExplorerController.excerpt("نص قصير", "غير موجود").after == "نص قصير"
+
+
 # النص المنسوخ: العنوان، ثم القول، ثم المصدر، ثم الرابط في سطر لحاله.
 def test_quote_has_title_text_citation_and_link(controller):
     opinion = controller.open_chapter(2, [1]).opinions_by_madhab[1][0]

@@ -49,8 +49,18 @@ def test_each_unit_belongs_to_one_region(atlas):
 
 # الدولة إما كاملة بلون واحد، أو مقسومة. ما يصير الاثنين مع بعض.
 def test_country_is_whole_or_split(atlas):
-    whole = {region.country for region in atlas.get_regions() if not region.is_partial()}
+    whole = {code for region in atlas.get_regions() if not region.is_partial()
+             for code in region.countries()}
     assert whole.isdisjoint(atlas.split_countries())
+
+
+# كل منطقة تظهر في جدول المصادر مرة وحدة، وكل دولة لها لون واحد.
+def test_regions_and_countries_are_not_repeated(atlas):
+    names = [region.name for region in atlas.get_regions()]
+    assert len(names) == len(set(names))
+    codes = [code for region in atlas.get_regions() if not region.is_partial()
+             for code in region.countries()]
+    assert len(codes) == len(set(codes))
 
 
 # لون بدون مصدر مرفوض. والمنطقة بدون مذهب ما تحتاج مصدر.

@@ -29,8 +29,9 @@ class MapRepository:
         data = json.loads(Path(map_file).read_text(encoding="utf-8"))
         # النجمتين تفكان القاموس: كل مفتاح فيه يصير اسم حقل في الكائن.
         self._sources = {item["source_id"]: Source(**item) for item in data["sources"]}
-        # المحافظات تجي من الملف قائمة، والنموذج يبيها صف ثابت، فنحوّلها.
-        self._regions = [MapRegion(**{**item, "units": tuple(item.get("units", ()))})
+        # المحافظات والدول الإضافية تجي من الملف قوائم، والنموذج يبيها صفوف ثابتة، فنحوّلها.
+        self._regions = [MapRegion(**{**item, "units": tuple(item.get("units", ())),
+                                      "also": tuple(item.get("also", ()))})
                          for item in data["regions"]]
         self._mentions = [MapMention(**item) for item in data["mentions"]]
         # الحدود ملفات كبيرة شوي، فنقرأها مرة وحدة ونحفظها هنا.

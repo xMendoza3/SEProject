@@ -6,7 +6,7 @@
 """
 
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from src.database import DatabaseManager
 from src.exporter import EXPORT_FORMATS, Exporter
@@ -20,13 +20,25 @@ from src.scraper import BoundaryScraper, FiqhScraper
 
 
 # ============================================ ما يرجعه المتحكم للواجهة
-# نتائج البحث: أبواب طابق عنوانها، وأقوال طابق نصها، وعناوين أبواب هذي الأقوال.
+# مقتطف من القول حول كلمة البحث: اللي قبلها، والكلمة نفسها، واللي بعدها.
+# الواجهة تميّز الكلمة بلون، فيشوف المستخدم وين طابق بحثه بدون ما يفتح الباب.
+@dataclass(frozen=True)
+class Excerpt:
+    before: str
+    match: str
+    after: str
+
+
+# نتائج البحث: أبواب طابق عنوانها، وأقوال طابق نصها، وعناوين أبواب هذي الأقوال،
+# وعنوان القسم اللي فوق كل باب طابق، ومقتطف من كل قول حول كلمة البحث.
 @dataclass(frozen=True)
 class SearchResults:
     query: str
     chapters: list[Chapter]
     opinions: list[Opinion]
     titles: dict[int, str]
+    parents: dict[int, str] = field(default_factory=dict)
+    excerpts: dict[int, Excerpt] = field(default_factory=dict)
 
     def is_empty(self) -> bool:
         return not self.chapters and not self.opinions
@@ -89,7 +101,33 @@ class ExplorerController:
         opinions = [o for o in self._db.search_text(query)
                     if wanted.intersection(o.madhab_ids)]
         titles = self._db.get_titles(o.chapter_id for o in opinions)
-        return SearchResults(query, chapters, opinions, titles)
+        # عناوين كثيرة تتكرر في الكتاب، مثل تعريفه وشروطه، فنعرض معها القسم اللي فوقها.
+        parents = self._db.get_titles(c.parent_id for c in chapters if c.parent_id)
+        excerpts = {o.opinion_id: self.excerpt(o.text, query) for o in opinions}
+        return SearchResults(query, chapters, opinions, titles,
+                             parents={c.chapter_id: parents.get(c.parent_id, "")
+                                      for c in chapters},
+                             excerpts=excerpts)
+
+    # مقتطف قصير حول كلمة البحث. القص يصير عند مسافة، عشان ما تنقطع كلمة بالنص.
+    # ولو ما لقينا الكلمة، نرجع أول القول.
+    @staticmethod
+    def excerpt(text: str, query: str, width: int = 110) -> Excerpt:
+        text = " ".join(text.split())
+        found = DatabaseManager.locate(text, query)
+        if found is None:
+            cut = text.rfind(" ", 0, width * 2) if len(text) > width * 2 else len(text)
+            return Excerpt("", "", text[:cut] + ("…" if cut < len(text) else ""))
+        start, end = found
+        left, right = 0, len(text)
+        if start > width:
+            space = text.find(" ", start - width, start)
+            left = space + 1 if space >= 0 else start - width
+        if len(text) > end + width:
+            space = text.rfind(" ", end, end + width)
+            right = space if space > end else end + width
+        return Excerpt(("…" if left else "") + text[left:start], text[start:end],
+                       text[end:right] + ("…" if right < len(text) else ""))
 
     # ------------------------------------------------------ التصفح
     # الأبواب اللي تحت باب معيّن. بدون أب ترجع الأجزاء الخمسة.

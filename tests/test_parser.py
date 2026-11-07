@@ -2,7 +2,7 @@
 اختبارات المحلل: تقسيم الصفحة، وشجرة العناوين، ولمين تتبع كل قطعة نص.
 """
 
-from src.parser import SEPARATOR, PageParser
+from src.parser import SEPARATOR, PageParser, fix_typos
 
 
 # صفحة خام بنفس شكل ملف تراث: النص، ورقم الجزء، ورقم الصفحة المطبوعة.
@@ -77,3 +77,26 @@ def test_footnote_follows_its_chapter_across_pages():
     assert (2, 1, "footnote", "(٢) حاشية الثاني تبدأ هنا") in found
     assert (2, 2, "footnote", "وتكمل حاشية الثاني هنا") in found
     assert (3, 2, "main", "الباب الثالث\nكلام الثالث") in found
+
+
+# أخطاء الكتابة تنصحح في الكلمة الكاملة بس، ومعها الفاصلة العربية بعدها.
+def test_typos_are_fixed_as_whole_words():
+    assert fix_typos("وجب عليه سجود السهون") == "وجب عليه سجود السهو"
+    assert fix_typos("وغلا فلا، غليه، فغن") == "وإلا فلا، إليه، فإن"
+    # كلمات صحيحة فيها نفس الحروف ما تتغير.
+    assert fix_typos("الغلام وإغلاق الباب") == "الغلام وإغلاق الباب"
+
+
+# غلا بمعنى فار على النار صحيحة، وكذلك الغل في الآية لأنها مشكلة.
+def test_correct_uses_are_kept():
+    for text in ("ثم غلا مرتين", "نقيع الزبيب إذا غلا واشتد", "ولا تجعل في قلوبنا غلًا"):
+        assert fix_typos(text) == text
+
+
+# التصحيح يصير وقت التحليل، فيوصل للصفحات والقطع والعناوين.
+def test_parser_applies_typo_fixes():
+    page = PageParser().parse_page(raw("لا يصح غلا يدًا بيد" + SEPARATOR + "(١) فارجع غليه"), 1)
+    assert page.main_text == "لا يصح إلا يدًا بيد"
+    assert page.footnote_text == "(١) فارجع إليه"
+    index = {"headings": [{"title": "سجود السهون", "level": 1, "page": 1}]}
+    assert PageParser().parse_chapters(index)[0].title == "سجود السهو"

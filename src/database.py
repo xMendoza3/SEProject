@@ -415,6 +415,35 @@ class DatabaseManager:
         text = _TASHKEEL.sub("", text).translate(_UNIFY_LETTERS)
         return _SPACES.sub(" ", text).strip()
 
+    # مكان كلمة البحث في النص الأصلي، بنفس قواعد التوحيد: بداية الكلمة ونهايتها.
+    # نوحّد النص حرف حرف، ونحفظ لكل حرف موحّد مكانه في الأصل،
+    # فنلقى الكلمة في النسخة الموحّدة ونرجع مكانها في الأصل بحركاته.
+    # ترجع لا شي لو الكلمة مو موجودة.
+    @classmethod
+    def locate(cls, text: str, query: str) -> tuple[int, int] | None:
+        term = cls._normalize(query)
+        if not term:
+            return None
+        letters, origins = [], []
+        for index, char in enumerate(text):
+            if _TASHKEEL.fullmatch(char):
+                continue
+            if char.isspace():
+                # المسافات المتتالية تصير مسافة وحدة، مثل التوحيد بالضبط.
+                if not letters or letters[-1] == " ":
+                    continue
+                char = " "
+            letters.append(char.translate(_UNIFY_LETTERS))
+            origins.append(index)
+        found = "".join(letters).find(term)
+        if found < 0:
+            return None
+        # حركة آخر حرف تبقى مع الكلمة.
+        end = origins[found + len(term) - 1] + 1
+        while end < len(text) and _TASHKEEL.fullmatch(text[end]):
+            end += 1
+        return origins[found], end
+
 
 # ======================================================= التجربة
 # التجربة تبني قاعدة بيانات في الذاكرة بس، مو في ملف.

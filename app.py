@@ -8,6 +8,7 @@
 """
 
 import html
+import math
 import socket
 import textwrap
 from pathlib import Path
@@ -51,11 +52,14 @@ MAP_COLORS = {
 # ===================================================== الزخارف
 # زخارف هندسية إسلامية بسيطة، كلها مبنية من النجمة الثمانية في ملف الزخرفة:
 # نقش خفيف يغطي الخلفية، وشريط تحت العناوين، وفاصل في وسطه نجمة.
-# لون الخطوط في النقش خافت جداً عشان ما يزاحم النص،
+# لون الخطوط في النقش خافت عشان ما يزاحم النص، لكنه واضح بما يكفي إنه يبان،
 # ولون الشريط والفاصل برونزي مثل تذهيب المخطوطات، وهو للزينة بس، ما يعني أي مذهب.
+# العنوان الكبير مذهّب بتدرج من لونين: غامق في الطرفين وفاتح في الوسط، مثل لمعة المعدن.
 ORNAMENTS = {
-    "light": {"line": "#6b5432", "alpha": 0.08, "gold": "#8a6d3b"},
-    "dark": {"line": "#e8dcc4", "alpha": 0.06, "gold": "#c9a96b"},
+    "light": {"line": "#6b5432", "alpha": 0.15, "gold": "#8a6d3b",
+              "gold_deep": "#5a421c", "gold_shine": "#b98f3e"},
+    "dark": {"line": "#e8dcc4", "alpha": 0.12, "gold": "#c9a96b",
+             "gold_deep": "#a8823f", "gold_shine": "#f5e1a8"},
 }
 
 
@@ -107,9 +111,33 @@ def band_svg(color: str, width: int = 40, height: int = 22) -> str:
             f'<polygon points="{star}" fill="{color}" fill-opacity="0.55"/></svg>')
 
 
-# أجزاء جاهزة نحطها في الصفحة: شريط تحت العنوان، وفاصل في وسطه نجمة.
+# الوردة: زخرفة دائرية كبيرة في زاوية شاشة الترحيب، مثل الشمسة في أول المخطوطات.
+# دائرتين، وبينهم نجمتين ثمانيتين وحدة مائلة عن الثانية فيطلع منهم شكل بستة عشر طرفاً،
+# وفي الوسط دائرة ونجمة صغيرة.
+def rosette_svg(color: str, size: int = 200) -> str:
+    c = size / 2
+
+    # نلف الرؤوس حول المركز بالزاوية المطلوبة.
+    def turned(points, degrees):
+        angle = math.radians(degrees)
+        cos, sin = math.cos(angle), math.sin(angle)
+        return [(c + (x - c) * cos - (y - c) * sin, c + (x - c) * sin + (y - c) * cos)
+                for x, y in points]
+
+    big = star_outline(c, c, size * 0.40)
+    small = star_outline(c, c, size * 0.15)
+    rings = "".join(f'<circle cx="{c}" cy="{c}" r="{size * r:.1f}"/>' for r in (0.47, 0.44, 0.21))
+    stars = (f'<polygon points="{svg_points(big)}"/>'
+             f'<polygon points="{svg_points(turned(big, 22.5))}"/>')
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" width="{size}" height="{size}">'
+            f'<g fill="none" stroke="{color}" stroke-width="1.2">{rings}{stars}</g>'
+            f'<polygon points="{svg_points(small)}" fill="{color}" fill-opacity="0.5"/></svg>')
+
+
+# أجزاء جاهزة نحطها في الصفحة: شريط تحت العنوان، وفاصل في وسطه ثلاث نجوم.
 BAND = '<div class="fx-band"></div>'
-DIVIDER = '<div class="fx-divider"><span class="fx-star"></span></div>'
+DIVIDER = ('<div class="fx-divider"><span class="fx-star"></span>'
+           '<span class="fx-star fx-star-big"></span><span class="fx-star"></span></div>')
 
 # سنة وفاة كل إمام بالهجري، للخط الزمني في شاشة الترحيب.
 IMAM_DEATH_YEARS = {1: 150, 2: 179, 3: 204, 4: 241}
@@ -117,16 +145,22 @@ IMAM_DEATH_YEARS = {1: 150, 2: 179, 3: 204, 4: 241}
 
 # ======================================================= التنسيق
 # المكتبة ما تدعم الكتابة من اليمين لليسار، فنضيفها بتنسيق يدوي.
-# خطين: أميري لنص الكتاب والعناوين، وبلكس العربي للواجهة.
+# ثلاث خطوط: أميري لنص الكتاب والعناوين، ونوتو نسخ للواجهة والكلام العادي،
+# وخط النستعليق لاسم التطبيق بس، بحروفه المنسابة مثل لوحات الخط اليدوي، ومذهّب.
+# نوتو نسخ خط نسخ واضح ومريح في الأحجام الصغيرة، ويتناسق مع أميري لأنهم من نفس العائلة،
+# فتبقى الصفحة كلها بروح المخطوطة. ولتغيير خط الواجهة، عدّل سطر الاستيراد ومتغير الواجهة تحت.
 # الأقواس المعقوفة المضاعفة لأن النص يمر على دالة تعبئة القيم.
 STYLE = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
 
 :root {{
     --ink-1: {ink1}; --ink-2: {ink2}; --ink-3: {ink3}; --ink-4: {ink4};
+    --gold: {gold};
     --book: "Amiri", "Traditional Arabic", serif;
-    --ui: "IBM Plex Sans Arabic", Tahoma, sans-serif;
+    --ui: "Noto Naskh Arabic", Tahoma, sans-serif;
+    --title: "Gulzar", "Amiri", serif;
+    --gold-deep: {gold_deep}; --gold-shine: {gold_shine};
 }}
 
 /* اتجاه المحتوى دائماً من اليمين لليسار */
@@ -155,8 +189,17 @@ STYLE = """
 
 /* شاشة الترحيب */
 .fx-hero h1 {{
-    font-family: var(--book); font-weight: 700; font-size: 3rem;
-    line-height: 1.4; margin: 0 0 .4rem; padding: 0;
+    font-family: var(--title); font-weight: 400; font-size: 4.3rem;
+    line-height: 2.3; margin: 1.2rem 0 0; padding: 0 0 .1em;
+}}
+/* التذهيب: التدرج يصير خلفية للحروف نفسها، والحروف شفافة فيبان التدرج من خلالها.
+   والظل الخفيف يعطيها عمقاً مثل الحبر المذهّب على الورق. */
+.fx-gilded {{
+    background: linear-gradient(175deg, var(--gold-deep) 10%, var(--gold-shine) 48%,
+                                var(--gold-deep) 92%);
+    -webkit-background-clip: text; background-clip: text;
+    color: transparent; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 2px 1.5px color-mix(in srgb, var(--gold-deep) 35%, transparent));
 }}
 .fx-hero p {{ font-size: 1.15rem; opacity: .8; max-width: 46rem; line-height: 1.9; }}
 
@@ -219,9 +262,14 @@ STYLE = """
 [class*="st-key-op-m"] {{ gap: .55rem; }}
 
 /* أزرار اختيار المذاهب: كل زر بحبر مذهبه، والمعيّن الصغير علامته */
-.st-key-madhab_pills [role="toolbar"] > button {{ display: inline-flex; align-items: center; gap: .45rem; }}
+.st-key-madhab_pills [role="toolbar"] {{ gap: .55rem; }}
+.st-key-madhab_pills [role="toolbar"] > button {{
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .4rem 1.05rem; min-height: 2.5rem; border-width: 1.5px;
+}}
+.st-key-madhab_pills [role="toolbar"] > button * {{ font-size: 1.08rem; font-weight: 600; }}
 .st-key-madhab_pills [role="toolbar"] > button::before {{
-    content: ""; flex: none; width: .5em; height: .5em;
+    content: ""; flex: none; width: .55em; height: .55em;
     transform: rotate(45deg); background: var(--pill-ink);
 }}
 .st-key-madhab_pills [role="toolbar"] > button:nth-child(1) {{ --pill-ink: var(--ink-1); }}
@@ -249,7 +297,7 @@ STYLE = """
 
 /* الجوال: عناوين أصغر، والأئمة في عمودين بدل أربعة */
 @media (max-width: 640px) {{
-    .fx-hero h1 {{ font-size: 2.1rem; }}
+    .fx-hero h1 {{ font-size: 2.9rem; }}
     .fx-title {{ font-size: 1.7rem; }}
     .fx-timeline {{ grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 1.6rem; }}
     .fx-timeline::before {{ display: none; }}
@@ -266,7 +314,7 @@ STYLE = """
 /* الشريط الجانبي */
 .fx-brand {{ display: flex; align-items: center; gap: .6rem; margin-bottom: .3rem; }}
 .fx-brand .fx-star {{ font-size: 1.2rem; --ink: currentColor; }}
-.fx-brand b {{ font-family: var(--book); font-size: 1.6rem; font-weight: 700; }}
+.fx-brand b {{ font-family: var(--title); font-size: 1.95rem; font-weight: 400; line-height: 2.3; }}
 .fx-section {{ font-size: .85rem; opacity: .6; margin: .6rem 0 .1rem; }}
 
 /* قوائم الأبواب: صفوف بدون إطار، تبدأ من اليمين */
@@ -368,7 +416,89 @@ STYLE = """
     background: linear-gradient(to left, transparent, currentColor);
 }}
 .fx-divider::after {{ background: linear-gradient(to right, transparent, currentColor); }}
-.fx-divider .fx-star {{ font-size: 1rem; }}
+.fx-divider .fx-star {{ font-size: .6rem; opacity: .75; }}
+.fx-divider .fx-star-big {{ font-size: 1rem; opacity: 1; }}
+
+/* الوردة في زاوية شاشة الترحيب: بعيدة عن النص، وتختفي في الشاشات اللي ما تتسع لها */
+.fx-hero {{ position: relative; }}
+@media (min-width: 1100px) {{
+    .fx-hero::before {{
+        content: ""; position: absolute; left: 1rem; top: -.4rem;
+        width: 12.5rem; height: 12.5rem; pointer-events: none;
+        background-image: {rosette}; background-size: contain; background-repeat: no-repeat;
+        opacity: .5;
+    }}
+}}
+
+/* خانة البحث واختيار المذاهب في الصفحة الرئيسية: إطار مذهّب مزدوج،
+   ونجمتين على زاويتيه العلويتين، مثل إطار الصفحة الأولى في المخطوطات */
+.st-key-finder {{
+    position: relative; margin: 1.4rem 0 1.6rem; padding: 1.3rem 1.5rem 1.1rem;
+    border: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+    border-radius: 14px;
+    outline: 1px solid color-mix(in srgb, var(--gold) 25%, transparent); outline-offset: -7px;
+    background: color-mix(in srgb, var(--gold) 5%, transparent);
+}}
+.st-key-finder::before, .st-key-finder::after {{
+    content: ""; position: absolute; top: -.6rem; width: 1.2rem; height: 1.2rem;
+    background-image: {star}; background-size: contain;
+}}
+.st-key-finder::before {{ right: 1.4rem; }}
+.st-key-finder::after {{ left: 1.4rem; }}
+.fx-finder-title {{ display: flex; align-items: center; gap: .55rem; }}
+.fx-finder-title .fx-star {{ --ink: var(--gold); font-size: .95rem; }}
+.fx-finder-title b {{ font-family: var(--book); font-size: 1.7rem; font-weight: 700; line-height: 1.4; }}
+.fx-finder-lead {{ opacity: .75; margin: .1rem 0 .2rem; }}
+.fx-examples {{ font-size: .9rem; opacity: .65; }}
+[class*="st-key-example_"] button {{ padding: .1rem .7rem; min-height: 0; border-radius: 999px;
+    border: 1px solid color-mix(in srgb, currentColor 18%, transparent); }}
+
+/* شريط البحث المختصر فوق الأبواب والنتائج: بدون أسماء الخانات عشان ياخذ سطراً واحداً */
+.st-key-finder_bar {{
+    padding-bottom: .7rem; margin-bottom: .6rem;
+    border-bottom: 1px solid color-mix(in srgb, var(--gold) 30%, transparent);
+}}
+.st-key-finder_bar [data-testid="stWidgetLabel"] {{ display: none; }}
+
+/* نتائج البحث: كل باب وتحته الأقوال اللي طابقت، وكلمة البحث مميزة بلون التذهيب */
+.fx-results-count {{ opacity: .7; margin: -.4rem 0 .4rem; }}
+/* كل باب بطاقة بإطار مذهّب وسهم على اليسار، والبطاقة كلها تنضغط:
+   الزر يمد طبقة شفافة فوق البطاقة كاملة، فأي ضغطة عليها تفتح الباب. */
+[class*="st-key-chapter_hit_"] {{
+    position: relative; gap: .1rem;
+    padding: .8rem 1.2rem .75rem 3.2rem; margin-bottom: .2rem;
+    border: 1px solid color-mix(in srgb, var(--gold) 45%, transparent); border-radius: 12px;
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+    transition: background .15s, border-color .15s, box-shadow .15s;
+}}
+[class*="st-key-chapter_hit_"]:hover {{
+    border-color: var(--gold);
+    background: color-mix(in srgb, var(--gold) 13%, transparent);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--gold) 20%, transparent);
+}}
+[class*="st-key-chapter_hit_"]::after {{
+    content: "←"; position: absolute; left: 1.2rem; top: 50%; transform: translateY(-50%);
+    font-size: 1.4rem; color: var(--gold); pointer-events: none;
+}}
+[class*="st-key-chapter_hit_"] [data-testid="stElementContainer"],
+[class*="st-key-chapter_hit_"] .stButton {{ position: static; }}
+[class*="st-key-chapter_hit_"] button {{
+    position: static; padding: 0; min-height: 0; justify-content: flex-start; text-align: right;
+}}
+[class*="st-key-chapter_hit_"] button::after {{
+    content: ""; position: absolute; inset: 0; border-radius: 12px; z-index: 1;
+}}
+[class*="st-key-chapter_hit_"] button p {{
+    font-family: var(--book); font-size: 1.4rem; font-weight: 700; line-height: 1.6;
+}}
+.fx-parent {{ font-size: .88rem; opacity: .65; }}
+[class*="st-key-result_group_"] button p {{ font-family: var(--book); font-size: 1.3rem; font-weight: 700; }}
+[class*="st-key-group_"] {{ gap: .5rem; margin-bottom: 1rem; }}
+.fx-excerpt {{ font-family: var(--book); font-size: 1.12rem; line-height: 2; }}
+.fx-excerpt mark {{
+    color: inherit; padding: 0 .15em; border-radius: 3px;
+    background: color-mix(in srgb, var(--gold) 35%, transparent);
+}}
 /* بطاقة الخريطة: نجمة برونزية في زاويتها */
 .st-key-map_card {{ position: relative; }}
 .st-key-map_card::before {{
@@ -455,7 +585,7 @@ SCRIPT = """
 # قاعدة بطاقة القول لكل مذهب. كل بطاقة مفتاحها يبدأ برقم مذهبها،
 # والمكتبة تحوّل المفتاح لاسم فئة، فنقدر نلوّن كل بطاقة بحبر مذهبها.
 CARD_RULE = """
-[class*="st-key-op-m{madhab_id}-"] {{
+[class*="st-key-op-m{madhab_id}-"], [class*="st-key-hit-m{madhab_id}-"] {{
     border-right: 3px solid var(--ink-{madhab_id});
     background: color-mix(in srgb, var(--ink-{madhab_id}) 6%, transparent);
     border-radius: 2px 10px 10px 2px;
@@ -469,15 +599,16 @@ PREVIEW_LENGTH = 700
 # أقصى عدد نتائج نعرضه من كل نوع في البحث.
 MAX_SHOWN_RESULTS = 50
 
-# باب نقترحه في شاشة الترحيب: صلاة التراويح.
-SAMPLE_CHAPTER_ID = 267
+# أمثلة نقترحها تحت خانة البحث في شاشة الترحيب. الضغط على أي مثال يبحث عنه.
+EXAMPLE_QUERIES = ["صلاة التراويح", "سجود السهو", "المسح على الخفين"]
 
 # أقصى عدد خطوات يحفظها سجل التنقل لزر الرجوع.
 HISTORY_LIMIT = 50
 
-# المكان المفتوح في الصفحة: رقم باب، أو لا شي لشاشة البداية، أو هذي الكلمة للخريطة،
-# أو كلمة الإمام ومعها رقم مذهبه لصفحة نبذته.
+# المكان المفتوح في الصفحة: رقم باب، أو لا شي لشاشة البداية، أو كلمة الخريطة،
+# أو كلمة البحث لصفحة النتائج، أو كلمة الإمام ومعها رقم مذهبه لصفحة نبذته.
 MAP_PAGE = "map"
+SEARCH_PAGE = "search"
 IMAM_PAGE_PREFIX = "imam-"
 
 # أسماء الأئمة المختصرة، لأزرار التنقل بين صفحاتهم.
@@ -494,7 +625,8 @@ def imam_from_place(place) -> int | None:
         return int(place.removeprefix(IMAM_PAGE_PREFIX))
     return None
 
-MODES = ["تصفح", "بحث", "مفضلة", "حول"]
+# أقسام الشريط الجانبي. البحث مو منها: مكانه الصفحة الرئيسية، لأنه أهم شي في التطبيق.
+MODES = ["تصفح", "مفضلة", "حول"]
 
 DISCLAIMER = (
     "تقسيم الأقوال آلي، والمرجع هو نص الكتاب. "
@@ -556,6 +688,27 @@ def go_back():
     history = st.session_state.get("history", [])
     if history:
         st.session_state.place, st.session_state.highlight = history.pop()
+
+
+# ===================================================== البحث والمذاهب
+# خانة البحث وأزرار المذاهب تظهر في أكثر من صفحة، لكن مو في كل الصفحات.
+# والمكتبة تمسح قيمة أي خانة ما انرسمت في الصفحة الحالية،
+# فلو فتحت الخريطة ورجعت، كان بيضيع بحثك واختيارك للمذاهب.
+# الحل: نحفظ القيمتين في مفتاحين ثابتين ما ترتبط بأي خانة،
+# وكل ما تغيّرت الخانة نحدّث المفتاح الثابت، وكل ما انرسمت من جديد تاخذ قيمتها منه.
+def sync_madhabs():
+    st.session_state.madhabs = sorted(st.session_state.get("madhab_pills") or [])
+
+
+# تشغيل البحث: من زر البحث، أو زر الإدخال، أو مثال من الأمثلة.
+# المثال يكتب نفسه في الخانة أول، عشان يشوف المستخدم وش اللي انبحث عنه.
+def run_search(example: str | None = None):
+    if example is not None:
+        st.session_state.query = example
+    query = (st.session_state.get("query") or "").strip()
+    st.session_state.search_query = query
+    if query:
+        go_to(SEARCH_PAGE)
 
 
 # لما يختار المستخدم إماماً ثانياً من أزرار صفحة النبذة، نفتح صفحته.
@@ -657,10 +810,12 @@ def map_figure(madhab_map, colors: dict, palette: dict, hover):
         style = dict(colorscale=[[0, color], [1, color]], showscale=False,
                      marker_line_color=palette["border"], marker_line_width=0.6,
                      hovertemplate="%{text}<extra></extra>")
-        if whole:
+        # المنطقة ممكن تغطي أكثر من دولة على الخريطة، مثل فلسطين، فكل دولة تاخذ نفس الكلام.
+        countries = [(code, r) for r in whole for code in r.countries()]
+        if countries:
             figure.add_trace(go.Choropleth(
-                locations=[r.country for r in whole], locationmode="ISO-3",
-                z=[1] * len(whole), text=[hover(r) for r in whole], **style))
+                locations=[code for code, _ in countries], locationmode="ISO-3",
+                z=[1] * len(countries), text=[hover(r) for _, r in countries], **style))
         if parts and madhab_map.shapes:
             figure.add_trace(go.Choropleth(
                 geojson=madhab_map.shapes, locations=[unit for unit, _ in parts],
@@ -679,7 +834,7 @@ def map_figure(madhab_map, colors: dict, palette: dict, hover):
     figure.update_layout(
         height=620, margin={"l": 0, "r": 0, "t": 0, "b": 0},
         paper_bgcolor="rgba(0,0,0,0)", dragmode="pan",
-        hoverlabel={"align": "right", "font": {"family": "IBM Plex Sans Arabic, sans-serif",
+        hoverlabel={"align": "right", "font": {"family": "Noto Naskh Arabic, sans-serif",
                                                "size": 14}},
         uirevision="madhab-map",
     )
@@ -693,24 +848,32 @@ class AppView:
         self._controller = controller
         self._madhabs = {m.madhab_id: m for m in controller.get_madhabs()}
 
-    # نقطة البداية: ترسم الشريط الجانبي، ثم الباب المفتوح أو شاشة الترحيب.
+    # نقطة البداية: ترسم الشريط الجانبي، ثم المكان المفتوح: شاشة الترحيب،
+    # أو نتائج البحث، أو باب، أو الخريطة، أو نبذة إمام.
     def render(self):
         self._apply_style()
         # أول تشغيل على جهاز جديد: نبني قاعدة البيانات تلقائياً من ملفات الكتاب.
         if not self._controller.is_ready():
             self._build_database()
             return
-        selected = self.render_sidebar()
+        self.render_sidebar()
         self.render_back_button("back")
+        selected = self.selected_madhabs()
         place = st.session_state.get("place")
         if place == MAP_PAGE:
             self.render_map()
+        elif place == SEARCH_PAGE:
+            self.render_results(selected)
         elif imam_from_place(place):
             self.render_imam(imam_from_place(place))
         elif place is None:
             self.render_welcome()
         else:
             self.render_chapter(place, selected)
+
+    # المذاهب المختارة، مرتبة. أول مرة: الأربعة كلها.
+    def selected_madhabs(self) -> list[int]:
+        return sorted(st.session_state.get("madhabs", list(self._madhabs)))
 
     # تعبّي التنسيق بألوان الوضع الحالي، فاتح أو داكن.
     def _apply_style(self):
@@ -727,6 +890,8 @@ class AppView:
             # نقش أصغر في الشريط الجانبي، لأنه أضيق.
             pattern_small=svg_url(pattern_svg(ornament["line"], ornament["alpha"] * 0.8, 72, 13)),
             band=svg_url(band_svg(ornament["gold"])), gold=ornament["gold"], star=svg_url(star),
+            rosette=svg_url(rosette_svg(ornament["gold"])),
+            gold_deep=ornament["gold_deep"], gold_shine=ornament["gold_shine"],
         ))
         # الخيار الأخير يسمح للسكربت يشتغل. آمن هنا لأنه كودنا، ما فيه شي من المستخدم.
         with st.container(key="fx_script"):
@@ -761,41 +926,70 @@ class AppView:
             return "شاشة البداية"
         if place == MAP_PAGE:
             return "خريطة المذاهب"
+        if place == SEARCH_PAGE:
+            return "نتائج البحث"
         if imam_from_place(place):
             return f"نبذة الإمام {IMAM_SHORT_NAMES[imam_from_place(place)]}"
         path = self._controller.get_path(place)
         return path[-1].title if path else "الباب السابق"
 
     # =============================================== الشريط الجانبي
-    # يرجع أرقام المذاهب المختارة، مرتبة.
-    def render_sidebar(self) -> list[int]:
+    # الأشياء المساعدة: الرجوع للبداية، والخريطة، وشجرة الأبواب، والمفضلة، وعن التطبيق.
+    # البحث واختيار المذاهب مكانهم الصفحة الرئيسية.
+    def render_sidebar(self):
         with st.sidebar:
-            html_block(f'<div class="fx-brand">{star()}<b>المستكشف الفقهي</b></div>{BAND}')
-            # مدخل الخريطة فوق كل شي، لأنها صفحة كبيرة ومستقلة عن الكتاب.
+            html_block(f'<div class="fx-brand">{star()}<b class="fx-gilded">المستكشف الفقهي</b></div>{BAND}')
+            st.button("الصفحة الرئيسية", key="open_home", icon=":material/home:",
+                      on_click=go_to, args=(None,), width="stretch")
             st.button("خريطة انتشار المذاهب", key="open_map", icon=":material/public:",
                       on_click=go_to, args=(MAP_PAGE,), width="stretch")
-            selected = st.pills(
-                "المذاهب المعروضة",
-                options=list(self._madhabs),
-                selection_mode="multi",
-                default=list(self._madhabs),
-                format_func=lambda madhab_id: self._madhabs[madhab_id].name,
-                key="madhab_pills",
-            )
-            selected = sorted(selected or [])
             mode = st.segmented_control(
                 "القسم", MODES, default=MODES[0], required=True,
                 label_visibility="collapsed", key="mode", width="stretch",
             )
             if mode == "تصفح":
                 self.render_browser()
-            elif mode == "بحث":
-                self.render_search(selected)
             elif mode == "مفضلة":
                 self.render_bookmarks()
             else:
                 self.render_about()
-        return selected
+
+    # ================================================ خانة البحث
+    # البحث واختيار المذاهب مع بعض، لأن المذاهب المختارة تحدد نتائج البحث وأعمدة المقارنة.
+    # شكلين: بطاقة كبيرة في شاشة الترحيب، وشريط مختصر فوق الأبواب والنتائج.
+    # الخانات نفسها في الشكلين بنفس الإعدادات، والفرق في الإطار والترتيب بس،
+    # عشان المكتبة تعرف إنها نفس الخانة وما تضيع قيمتها بين الصفحات.
+    def render_finder(self, compact: bool = False):
+        if "madhab_pills" not in st.session_state:
+            st.session_state.madhab_pills = self.selected_madhabs()
+        if "query" not in st.session_state:
+            st.session_state.query = st.session_state.get("search_query", "")
+
+        # المذاهب فوق، وتحتها البحث بعرض الصفحة كاملة، في الشكلين.
+        # كذا المذاهب جنب الخانة اللي تتحكم فيها، والجوال يعرضهم بنفس الترتيب بدون زحمة.
+        with st.container(key="finder_bar" if compact else "finder"):
+            if not compact:
+                html_block(f'<div class="fx-finder-title">{star()}<b>ابحث وقارن</b></div>'
+                           '<p class="fx-finder-lead">اختر المذاهب التي ترغب في المقارنة بينها، '
+                           "ثم اكتب المسألة التي تبحث عنها.</p>")
+            st.pills(
+                "المذاهب التي ترغب في المقارنة بينها",
+                options=list(self._madhabs),
+                selection_mode="multi",
+                format_func=lambda madhab_id: self._madhabs[madhab_id].name,
+                key="madhab_pills",
+                on_change=sync_madhabs,
+            )
+            with st.container(horizontal=True, vertical_alignment="bottom", gap="small"):
+                st.text_input("المسألة التي تبحث عنها", key="query", on_change=run_search,
+                              placeholder="مثال: صلاة التراويح", icon=":material/search:")
+                st.button("ابحث", key="search_go", on_click=run_search, type="primary")
+            if not compact:
+                with st.container(horizontal=True, vertical_alignment="center", gap="small"):
+                    st.html('<span class="fx-examples">جرّب:</span>', width="content")
+                    for index, example in enumerate(EXAMPLE_QUERIES):
+                        st.button(example, key=f"example_{index}", type="tertiary",
+                                  on_click=run_search, args=(example,))
 
     # ======================================================= التصفح
     # مثل مستكشف الملفات: فوق مسار الباب الحالي، وتحته الأبواب اللي داخله.
@@ -833,41 +1027,68 @@ class AppView:
                 width="stretch",
             )
 
-    # ======================================================== البحث
-    def render_search(self, selected: list[int]):
-        query = st.text_input("ابحث في العناوين والأقوال", key="query",
-                              placeholder="مثال: صلاة التراويح")
-        if not query.strip():
-            html_block('<div class="fx-note">البحث يتجاهل الحركات، '
-                       'ويعامل الهمزات والتاء المربوطة كحرف واحد.</div>')
+    # ================================================= نتائج البحث
+    # صفحة كاملة للنتائج، فوقها شريط البحث عشان تعدّل كلمتك أو مذاهبك وأنت فيها.
+    # قسمين: أبواب طابق عنوانها، وتحتها أقوال طابق نصها مجموعة حسب أبوابها،
+    # وكل قول معه مذاهبه ومقتطف حول كلمة البحث.
+    def render_results(self, selected: list[int]):
+        self.render_finder(compact=True)
+        query = st.session_state.get("search_query", "").strip()
+        if not query:
+            html_block('<div class="fx-note">اكتب المسألة في خانة البحث. البحث يتجاهل الحركات، '
+                       "ويعامل الهمزات والتاء المربوطة كحرف واحد.</div>")
             return
 
         results = self._controller.receive_query(query, selected)
+        n = to_arabic_digits
+        html_block(f'<h1 class="fx-title">نتائج البحث عن «{esc(query)}»</h1>{BAND}')
         # حالة لا توجد نتائج: التوسيع اللي في مخطط حالات الاستخدام.
         if results.is_empty():
-            st.info("لا توجد نتائج. جرّب كلمة أقل، أو صيغة ثانية للكلمة، "
-                    "أو تأكد إن المذاهب المختارة فوق تشمل اللي تدور عليه.")
+            st.info("لا توجد نتائج. جرّب كلمة أقل، أو صيغة أخرى للكلمة، "
+                    "أو تأكد أن المذاهب المختارة تشمل ما تبحث عنه.")
             return
+        html_block(f'<p class="fx-results-count">أبواب: {n(len(results.chapters))}، '
+                   f"أقوال: {n(len(results.opinions))}</p>")
 
         if results.chapters:
-            html_block(f'<div class="fx-section">أبواب ({to_arabic_digits(len(results.chapters))})</div>')
+            html_block('<div class="fx-section">أبواب طابق عنوانها</div>')
             for chapter in results.chapters[:MAX_SHOWN_RESULTS]:
-                st.button(chapter.title, key=f"result_chapter_{chapter.chapter_id}",
-                          on_click=go_to, args=(chapter.chapter_id,),
-                          type="tertiary", width="stretch")
+                # كل باب بطاقة تنضغط: عنوانه، وتحته القسم اللي فوقه، لأن عناوين كثيرة تتكرر.
+                with st.container(key=f"chapter_hit_{chapter.chapter_id}"):
+                    st.button(chapter.title, key=f"result_chapter_{chapter.chapter_id}",
+                              on_click=go_to, args=(chapter.chapter_id,), type="tertiary")
+                    parent = results.parents.get(chapter.chapter_id)
+                    if parent:
+                        html_block(f'<div class="fx-parent">ضمن: {esc(parent)}</div>')
 
         if results.opinions:
-            html_block(f'<div class="fx-section">أقوال ({to_arabic_digits(len(results.opinions))})</div>')
+            html_block('<div class="fx-section">أقوال طابق نصها</div>')
+            groups = {}
             for opinion in results.opinions[:MAX_SHOWN_RESULTS]:
-                who = "، ".join(self._madhabs[i].name for i in opinion.madhab_ids)
-                title = results.titles.get(opinion.chapter_id, "")
-                st.button(f"{who}: {title}", key=f"result_opinion_{opinion.opinion_id}",
-                          on_click=go_to, args=(opinion.chapter_id, opinion.opinion_id),
-                          type="tertiary", width="stretch")
+                groups.setdefault(opinion.chapter_id, []).append(opinion)
+            for chapter_id, opinions in groups.items():
+                with st.container(key=f"group_{chapter_id}"):
+                    st.button(results.titles.get(chapter_id, ""), key=f"result_group_{chapter_id}",
+                              on_click=go_to, args=(chapter_id, opinions[0].opinion_id),
+                              type="tertiary")
+                    for opinion in opinions:
+                        self._render_hit(opinion, results.excerpts[opinion.opinion_id], selected)
+        elif not selected:
+            st.warning("ما اخترت أي مذهب، فما نعرض أقوالاً. اختر مذهباً واحداً على الأقل من الشريط فوق.")
 
         if max(len(results.chapters), len(results.opinions)) > MAX_SHOWN_RESULTS:
-            html_block(f'<div class="fx-note">نعرض أول {to_arabic_digits(MAX_SHOWN_RESULTS)} '
-                       'نتيجة من كل نوع. حدد البحث أكثر.</div>')
+            html_block(f'<div class="fx-note">نعرض أول {n(MAX_SHOWN_RESULTS)} '
+                       "نتيجة من كل نوع. حدد البحث أكثر.</div>")
+
+    # قول واحد في النتائج: بطاقة بحبر أول مذهب مختار من مذاهبه، وفيها مذاهبه والمقتطف.
+    def _render_hit(self, opinion, excerpt, selected: list[int]):
+        ink = next((i for i in opinion.madhab_ids if i in selected), opinion.madhab_ids[0])
+        madhabs = "".join(f"<span>{star(i)}{esc(self._madhabs[i].name)}</span>"
+                          for i in opinion.madhab_ids)
+        match = f"<mark>{esc(excerpt.match)}</mark>" if excerpt.match else ""
+        with st.container(key=f"hit-m{ink}-{opinion.opinion_id}"):
+            html_block(f'<div class="fx-shared">{madhabs}</div>'
+                       f'<div class="fx-excerpt">{esc(excerpt.before)}{match}{esc(excerpt.after)}</div>')
 
     # ====================================================== المفضلة
     def render_bookmarks(self):
@@ -946,7 +1167,7 @@ class AppView:
     def render_welcome(self):
         html_block(
             '<section class="fx-hero">'
-            f"<h1>المستكشف الفقهي المقارن</h1>{BAND}"
+            f'<h1><span class="fx-gilded">المستكشف الفقهي المقارن</span></h1>{BAND}'
             "<p>اقرأ أقوال المذاهب الأربعة في المسألة الواحدة جنباً إلى جنب، "
             "كما نقلها الجزيري في كتابه الفقه على المذاهب الأربعة، "
             "ومع كل قول مكانه في الكتاب.</p>"
@@ -964,8 +1185,8 @@ class AppView:
                     html_block('<em class="fx-tl-year">ت '
                                f"{to_arabic_digits(IMAM_DEATH_YEARS[madhab.madhab_id])}هـ</em>")
         html_block('<p class="fx-hint">اضغط على اسم أي إمام لعرض نبذة عن سيرته وطريقته في الاستنباط.</p>')
-        st.button("ابدأ بمثال: صلاة التراويح", on_click=go_to, args=(SAMPLE_CHAPTER_ID,),
-                  type="primary")
+        # البحث واختيار المذاهب بعد الأئمة مباشرة، لأنه أهم شي في التطبيق.
+        self.render_finder()
         # بطاقة كبيرة للخريطة، عشان تبان من أول نظرة.
         with st.container(border=True, key="map_card"):
             html_block(
@@ -980,8 +1201,8 @@ class AppView:
         html_block(
             DIVIDER +
             '<ol class="fx-steps">'
-            "<li>اختر المذاهب اللي تبي تقارن بينها من الشريط الجانبي.</li>"
-            "<li>تصفح أبواب الكتاب، أو ابحث عن مسألة.</li>"
+            "<li>اختر المذاهب التي ترغب في المقارنة بينها، واكتب المسألة في خانة البحث أعلاه.</li>"
+            "<li>أو تصفح أبواب الكتاب من القائمة الجانبية.</li>"
             "<li>قارن الأقوال، واضغط على عرض الدليل تحت أي قول.</li>"
             "</ol>"
             f'<p class="fx-note">في التطبيق {n(stats["opinions"])} قولاً من '
@@ -1151,6 +1372,8 @@ class AppView:
 
     # ========================================================= الباب
     def render_chapter(self, chapter_id: int, selected: list[int]):
+        # شريط البحث والمذاهب فوق الباب: تغيّر المذاهب فتتغير أعمدة المقارنة، أو تبحث من جديد.
+        self.render_finder(compact=True)
         view = self._controller.open_chapter(chapter_id, selected)
         if view is None:
             st.warning("هذا الباب غير موجود.")
@@ -1192,7 +1415,7 @@ class AppView:
     # أعمدة المقارنة: عمود لكل مذهب مختار، وفوقها شريط يلخص عدد الأقوال.
     def _render_comparison(self, view, selected: list[int]):
         if not selected:
-            st.warning("اختر مذهب واحد على الأقل من الشريط الجانبي.")
+            st.warning("اختر مذهباً واحداً على الأقل من خانة المذاهب أعلى الصفحة.")
             return
         if not view.chapter.opinions:
             # بعض العناوين تجمع أبواباً تحتها، والأقوال موجودة داخل هذي الأبواب.
@@ -1236,15 +1459,10 @@ class AppView:
     def _render_opinion(self, opinion, madhab_id: int, chapter):
         with st.container(key=f"op-m{madhab_id}-{opinion.opinion_id}"):
             others = [i for i in opinion.madhab_ids if i != madhab_id]
-            notes = []
-            if st.session_state.get("highlight") == opinion.opinion_id:
-                notes.append("<span>هذا القول اللي فتحته</span>")
             if others:
                 shared = "".join(f"<span>{star(i)}{esc(self._madhabs[i].name)}</span>"
                                  for i in others)
-                notes.append(f"<span>مشترك مع</span>{shared}")
-            if notes:
-                html_block(f'<div class="fx-shared">{"".join(notes)}</div>')
+                html_block(f'<div class="fx-shared"><span>مشترك مع</span>{shared}</div>')
 
             # نقص النص عند آخر مسافة قبل الحد، عشان ما تنقطع كلمة بالنص.
             text = opinion.text
