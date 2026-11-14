@@ -114,10 +114,17 @@ _TASHKEEL = re.compile(r"[ً-ْٰـ]")
 
 # حروف لها أكثر من شكل: نوحّدها وقت البحث.
 # فالباحث يكتب الصلاة أو الصلاه ويلقى نفس النتائج.
+# الألف المقصورة ما نوحّدها مع الياء، لأنها تفرق المعنى: ينهى غير ينهي.
 _UNIFY_LETTERS = str.maketrans({
     "أ": "ا", "إ": "ا", "آ": "ا", "ٱ": "ا",
-    "ى": "ي", "ئ": "ي", "ؤ": "و", "ة": "ه",
+    "ئ": "ي", "ؤ": "و", "ة": "ه",
 })
+
+# رقم نسخة قواعد التوحيد. نحفظه في قاعدة البيانات وقت الاستيراد.
+# لو غيّرنا القواعد نزيده واحد، فالقاعدة القديمة تنعرف إنها قديمة وتنبني من جديد،
+# لأن نسخ البحث المحفوظة فيها مبنية على القواعد القديمة.
+# النسخة الثانية: فصل الألف المقصورة عن الياء.
+SEARCH_VERSION = 2
 
 _SPACES = re.compile(r"\s+")
 
@@ -165,6 +172,8 @@ class DatabaseManager:
             self._save_pages(pages)
             self._save_chapters(chapters)
             self._save_opinions([o for chapter in chapters for o in chapter.opinions])
+            # خانة رقمية تحفظها قاعدة البيانات في الملف نفسه، نسجل فيها نسخة قواعد التوحيد.
+            self._connection.execute(f"PRAGMA user_version = {SEARCH_VERSION}")
 
     def _save_pages(self, pages: list[Page]):
         # الأمر هذا ينفّذ نفس الاستعلام على قائمة كاملة، أسرع بكثير من حلقة.
@@ -288,6 +297,10 @@ class DatabaseManager:
         ).fetchall()
         return [Madhab(row["madhab_id"], row["name"], row["imam"],
                        row["biography"], row["regions"]) for row in rows]
+
+    # هل نسخ البحث المحفوظة مبنية على قواعد التوحيد الحالية؟
+    def is_up_to_date(self) -> bool:
+        return self._connection.execute("PRAGMA user_version").fetchone()[0] == SEARCH_VERSION
 
     # أرقام عامة عن الكتاب، مفيدة لصفحة حول التطبيق.
     def get_stats(self) -> dict:

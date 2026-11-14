@@ -6,6 +6,7 @@ import sqlite3
 
 import pytest
 
+from src.database import DatabaseManager
 from src.models import Bookmark, Chapter
 from tests.book import make_book
 
@@ -78,3 +79,20 @@ def test_bookmark_survives_reimport_with_new_ids(db):
     db.add_bookmark(Bookmark(2, opinion_id=2))
     db.replace_book(*make_book(first_opinion_id=101))
     assert db.get_bookmarks()[0].opinion_id == 102
+
+
+# الألف المقصورة والياء حرفان مختلفان في البحث: ينهى غير ينهي.
+def test_alif_maqsura_is_not_ya():
+    assert DatabaseManager._normalize("ينهى") != DatabaseManager._normalize("ينهي")
+    assert DatabaseManager.locate("والإمام ينهي الصلاة", "ينهى") is None
+    assert DatabaseManager.locate("الشارع ينهى عن ذلك", "ينهى") is not None
+
+
+# قاعدة بيانات مبنية بقواعد بحث قديمة تنعرف إنها قديمة،
+# فالتطبيق يعيد بناءها تلقائياً. والاستيراد يرجعها محدّثة.
+def test_old_search_rules_need_rebuild(db):
+    assert db.is_up_to_date()
+    db._connection.execute("PRAGMA user_version = 1")
+    assert not db.is_up_to_date()
+    db.replace_book(*make_book())
+    assert db.is_up_to_date()

@@ -82,9 +82,10 @@ class ExplorerController:
         self._atlas = atlas or MapRepository()
         self._profiles = profiles or ProfileRepository()
 
-    # هل قاعدة البيانات فيها الكتاب؟ لو لا، لازم نشغّل الاستيراد أول.
+    # هل قاعدة البيانات فيها الكتاب، ومبنية على قواعد البحث الحالية؟
+    # لو لا، لازم نشغّل الاستيراد أول. والمفضلة ما تتأثر.
     def is_ready(self) -> bool:
-        return self._db.get_stats()["chapters"] > 0
+        return self._db.get_stats()["chapters"] > 0 and self._db.is_up_to_date()
 
     def get_madhabs(self) -> list[Madhab]:
         return self._db.get_madhabs()
@@ -128,6 +129,23 @@ class ExplorerController:
             right = space if space > end else end + width
         return Excerpt(("…" if left else "") + text[left:start], text[start:end],
                        text[end:right] + ("…" if right < len(text) else ""))
+
+    # القول كامل مقسوم قطعاً، وكل قطعة معها علامة: هل هي كلمة البحث؟
+    # الواجهة تميّز قطع الكلمة بلون، فيشوف المستخدم كل مواضعها في القول، مو أولها بس.
+    @staticmethod
+    def marked(text: str, query: str) -> list[tuple[str, bool]]:
+        parts, rest = [], text
+        while rest:
+            found = DatabaseManager.locate(rest, query)
+            if found is None:
+                parts.append((rest, False))
+                break
+            start, end = found
+            if start:
+                parts.append((rest[:start], False))
+            parts.append((rest[start:end], True))
+            rest = rest[end:]
+        return parts
 
     # ------------------------------------------------------ التصفح
     # الأبواب اللي تحت باب معيّن. بدون أب ترجع الأجزاء الخمسة.

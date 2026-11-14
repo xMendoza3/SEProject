@@ -126,3 +126,18 @@ def test_controller_returns_imam(controller):
     # رقم الصفحة المطبوع ١٣٤ هو الصفحة ١٢٨ في الموقع، لأن الموقع يعدّ المقدمات بفرق ستة.
     assert view.source.page_url(134).endswith("/128")
     assert controller.get_imam(9) is None
+
+
+# القول كامل مقسوم قطعاً، وكل مواضع كلمة البحث معلّمة، مو أولها بس.
+def test_marked_finds_every_match():
+    parts = ExplorerController.marked("قالوا: تجب الصلاة، وقالوا في الصَّلاة كذا", "الصلاه")
+    assert [part for part, is_match in parts if is_match] == ["الصلاة", "الصَّلاة"]
+    assert "".join(part for part, _ in parts) == "قالوا: تجب الصلاة، وقالوا في الصَّلاة كذا"
+    assert ExplorerController.marked("نص", "غير موجود") == [("نص", False)]
+
+
+# المتحكم ما يعتبر قاعدة البيانات جاهزة لو كانت مبنية بقواعد بحث قديمة.
+def test_not_ready_with_old_search_rules(controller, db):
+    assert controller.is_ready()
+    db._connection.execute("PRAGMA user_version = 0")
+    assert not controller.is_ready()

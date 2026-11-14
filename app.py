@@ -134,8 +134,10 @@ def rosette_svg(color: str, size: int = 200) -> str:
             f'<polygon points="{svg_points(small)}" fill="{color}" fill-opacity="0.5"/></svg>')
 
 
-# أجزاء جاهزة نحطها في الصفحة: شريط تحت العنوان، وفاصل في وسطه ثلاث نجوم.
+# أجزاء جاهزة نحطها في الصفحة: شريط تحت العنوان، وفاصل في وسطه ثلاث نجوم،
+# ونفس الشريط في الوسط يفصل بين أقسام الصفحة.
 BAND = '<div class="fx-band"></div>'
+SEPARATOR = '<div class="fx-band fx-sep"></div>'
 DIVIDER = ('<div class="fx-divider"><span class="fx-star"></span>'
            '<span class="fx-star fx-star-big"></span><span class="fx-star"></span></div>')
 
@@ -147,12 +149,13 @@ IMAM_DEATH_YEARS = {1: 150, 2: 179, 3: 204, 4: 241}
 # المكتبة ما تدعم الكتابة من اليمين لليسار، فنضيفها بتنسيق يدوي.
 # ثلاث خطوط: أميري لنص الكتاب والعناوين، ونوتو نسخ للواجهة والكلام العادي،
 # وخط النستعليق لاسم التطبيق بس، بحروفه المنسابة مثل لوحات الخط اليدوي، ومذهّب.
+# وخط كوفي عريض للقائمة الجانبية، أغمق وأوضح في الأحجام الصغيرة، ويميزها عن نص الكتاب.
 # نوتو نسخ خط نسخ واضح ومريح في الأحجام الصغيرة، ويتناسق مع أميري لأنهم من نفس العائلة،
 # فتبقى الصفحة كلها بروح المخطوطة. ولتغيير خط الواجهة، عدّل سطر الاستيراد ومتغير الواجهة تحت.
 # الأقواس المعقوفة المضاعفة لأن النص يمر على دالة تعبئة القيم.
 STYLE = """
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gulzar&family=Noto+Kufi+Arabic:wght@500;600;700&family=Noto+Naskh+Arabic:wght@400;500;600;700&display=swap');
 
 :root {{
     --ink-1: {ink1}; --ink-2: {ink2}; --ink-3: {ink3}; --ink-4: {ink4};
@@ -160,6 +163,7 @@ STYLE = """
     --book: "Amiri", "Traditional Arabic", serif;
     --ui: "Noto Naskh Arabic", Tahoma, sans-serif;
     --title: "Gulzar", "Amiri", serif;
+    --nav: "Noto Kufi Arabic", "Noto Naskh Arabic", Tahoma, sans-serif;
     --gold-deep: {gold_deep}; --gold-shine: {gold_shine};
 }}
 
@@ -195,13 +199,57 @@ STYLE = """
 /* التذهيب: التدرج يصير خلفية للحروف نفسها، والحروف شفافة فيبان التدرج من خلالها.
    والظل الخفيف يعطيها عمقاً مثل الحبر المذهّب على الورق. */
 .fx-gilded {{
-    background: linear-gradient(175deg, var(--gold-deep) 10%, var(--gold-shine) 48%,
-                                var(--gold-deep) 92%);
+    background: linear-gradient(110deg, var(--gold-deep) 20%, var(--gold-shine) 38%,
+                                #fff8e1 45%, var(--gold-shine) 52%, var(--gold-deep) 75%);
+    background-size: 260% 100%; background-position: 100% 0;
     -webkit-background-clip: text; background-clip: text;
     color: transparent; -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 2px 1.5px color-mix(in srgb, var(--gold-deep) 35%, transparent));
+    /* لمعة ضوء تمر على الحروف كل ثماني ثواني، مثل انعكاس الضوء على الذهب */
+    animation: fx-shine 8s ease-in-out 1s infinite;
 }}
-.fx-hero p {{ font-size: 1.15rem; opacity: .8; max-width: 46rem; line-height: 1.9; }}
+@keyframes fx-shine {{
+    0% {{ background-position: 100% 0; }}
+    35%, 100% {{ background-position: 0 0; }}
+}}
+
+/* السطر اللي تحت العنوان: بخط الكتاب، أكبر وأوضح، مثل افتتاحية مخطوطة */
+.fx-hero p {{
+    font-family: var(--book); font-size: 1.4rem; line-height: 2.05;
+    max-width: 44rem; opacity: .92;
+}}
+
+/* دخول ناعم لأجزاء شاشة الترحيب، واحد ورا الثاني، أول ما تنفتح */
+@keyframes fx-rise {{
+    from {{ opacity: 0; transform: translateY(14px); }}
+    to {{ opacity: 1; transform: none; }}
+}}
+.fx-hero {{ animation: fx-rise .9s ease-out both; }}
+.st-key-timeline {{ animation: fx-rise .9s ease-out .25s both; }}
+.st-key-finder {{ animation: fx-rise .9s ease-out .45s both; }}
+.st-key-map_card {{ animation: fx-rise .9s ease-out .6s both; }}
+
+/* نجوم الأئمة تتوهج بحبر مذهبها، وتكبر لما تمر عليها */
+@keyframes fx-glow {{
+    0%, 100% {{ filter: drop-shadow(0 0 2px var(--ink)); }}
+    50% {{ filter: drop-shadow(0 0 9px var(--ink)); }}
+}}
+.fx-tl .fx-star {{ animation: fx-glow 4s ease-in-out infinite; transition: transform .3s; }}
+.fx-tl:hover .fx-star {{ transform: scale(1.25) rotate(22.5deg); }}
+
+/* الفاصل بين أقسام الصفحة: نفس شريط العنوان، لكن في الوسط ويخفت من الطرفين أكثر */
+.fx-band.fx-sep {{
+    max-width: 38rem; margin: 1.8rem auto;
+    -webkit-mask-image: linear-gradient(to left, transparent, #000 25%, #000 75%, transparent);
+    mask-image: linear-gradient(to left, transparent, #000 25%, #000 75%, transparent);
+}}
+[data-testid="stSidebar"] .fx-band.fx-sep {{ margin: .5rem auto; max-width: 100%; }}
+
+/* من يفضّل تقليل الحركة في جهازه: نوقف كل الحركات */
+@media (prefers-reduced-motion: reduce) {{
+    .fx-gilded, .fx-hero, .fx-hero::before, .st-key-timeline, .st-key-finder,
+    .st-key-map_card, .fx-tl .fx-star {{ animation: none !important; }}
+}}
 
 /* الخط الزمني للأئمة: خط أفقي وعليه نجمة لكل إمام، الأقدم على اليمين */
 .fx-timeline {{
@@ -316,6 +364,13 @@ STYLE = """
 .fx-brand .fx-star {{ font-size: 1.2rem; --ink: currentColor; }}
 .fx-brand b {{ font-family: var(--title); font-size: 1.95rem; font-weight: 400; line-height: 2.3; }}
 .fx-section {{ font-size: .85rem; opacity: .6; margin: .6rem 0 .1rem; }}
+[data-testid="stSidebar"] .stButton button p,
+[data-testid="stSidebar"] [data-testid="stButtonGroup"] button p,
+[data-testid="stSidebar"] .fx-section {{
+    font-family: var(--nav); font-weight: 600;
+}}
+[data-testid="stSidebar"] .fx-section {{ font-weight: 700; opacity: .75; font-size: .82rem; }}
+[data-testid="stSidebar"] [class*="st-key-nav_"] button p {{ font-size: .98rem; }}
 
 /* قوائم الأبواب: صفوف بدون إطار، تبدأ من اليمين */
 [class*="st-key-nav_"] button, [class*="st-key-navcur_"] button,
@@ -343,7 +398,9 @@ STYLE = """
 .st-key-timeline {{ position: relative; margin: 1.6rem 0 .2rem; }}
 .st-key-timeline::before {{
     content: ""; position: absolute; top: .8rem; right: 0; left: 0;
-    height: 2px; background: currentColor; opacity: .15;
+    height: 2px; opacity: .45;
+    /* الخط يتدرج من حبر أول مذهب لحبر آخر مذهب، مثل خيط يربط الأئمة */
+    background: linear-gradient(to left, var(--ink-1), var(--ink-2), var(--ink-3), var(--ink-4));
 }}
 .fx-tl {{ display: grid; gap: .25rem; justify-items: start; }}
 .fx-tl .fx-star {{ font-size: 1.6rem; margin-bottom: .5rem; position: relative; }}
@@ -393,6 +450,9 @@ STYLE = """
 }}
 .fx-copy:hover {{ text-decoration: underline; text-underline-offset: .3em; }}
 
+/* تلميح المكتبة الإنجليزي داخل خانات الكتابة: يتداخل مع الكلام العربي، فنخفيه */
+[data-testid="InputInstructions"] {{ display: none; }}
+
 /* مكان السكربت: ما نبيه ياخذ مساحة في الصفحة */
 .st-key-fx_script {{ display: none; }}
 
@@ -421,13 +481,17 @@ STYLE = """
 
 /* الوردة في زاوية شاشة الترحيب: بعيدة عن النص، وتختفي في الشاشات اللي ما تتسع لها */
 .fx-hero {{ position: relative; }}
-@media (min-width: 1100px) {{
-    .fx-hero::before {{
-        content: ""; position: absolute; left: 1rem; top: -.4rem;
-        width: 12.5rem; height: 12.5rem; pointer-events: none;
-        background-image: {rosette}; background-size: contain; background-repeat: no-repeat;
-        opacity: .5;
-    }}
+/* تدور دورة كاملة كل دقيقتين، حركة تكاد ما تنلاحظ لكنها تعطي الصفحة حياة */
+@keyframes fx-turn {{ to {{ transform: rotate(360deg); }} }}
+.fx-hero::before {{
+    content: ""; position: absolute; left: 1rem; top: -.4rem;
+    width: 12.5rem; height: 12.5rem; pointer-events: none;
+    background-image: {rosette}; background-size: contain; background-repeat: no-repeat;
+    opacity: .5; animation: fx-turn 120s linear infinite;
+}}
+/* في الشاشات الصغيرة: أصغر وأخف، وخلف العنوان عشان ما تزاحمه */
+@media (max-width: 1099px) {{
+    .fx-hero::before {{ width: 8rem; height: 8rem; left: -.5rem; top: -1rem; opacity: .22; }}
 }}
 
 /* خانة البحث واختيار المذاهب في الصفحة الرئيسية: إطار مذهّب مزدوج،
@@ -524,6 +588,14 @@ STYLE = """
 #
 # الثاني أيقونة الجوال: نضيف للصفحة سطر يحدد أيقونة الشاشة الرئيسية.
 # وبعد النشر، التطبيق يكون داخل إطار في صفحة الموقع، فنضيفها للصفحة الكبيرة بعد.
+#
+# الثالث زر الرجوع في الجوال: التطبيق صفحة وحدة في نظر المتصفح،
+# فزر الرجوع كان يطلّعك من التطبيق كله. الحل: كل خطوة في سجل التنقل
+# نضيف لها خطوة في سجل المتصفح، ولما يضغط المستخدم رجوع في جواله،
+# المتصفح يرجع خطوة ويخبرنا، فنضغط زر الرجوع حقنا بداله.
+# والعكس: لو رجع بزرنا، نشيل الخطوة من سجل المتصفح بهدوء.
+# الخطوات كلها بعلامة في آخر الرابط، لأن المكتبة تعيد تشغيل الصفحة كاملة
+# عند أي رجوع في المتصفح، إلا لو الرابط فيه هالعلامة.
 SCRIPT = """
 <script>
 (function () {
@@ -578,6 +650,37 @@ SCRIPT = """
       page.head.appendChild(link);
     });
   });
+
+  var nav = window.fxNav = {depth: 0, skip: 0};
+  var mark = location.pathname + location.search + "#fiqh";
+  history.replaceState({fx: 0}, "", mark);
+
+  window.fxSync = function (depth) {
+    if (depth > nav.depth) {
+      for (var step = nav.depth + 1; step <= depth; step++) {
+        history.pushState({fx: step}, "", mark);
+      }
+    } else if (depth < nav.depth) {
+      nav.skip += 1;
+      history.go(depth - nav.depth);
+    }
+    nav.depth = depth;
+  };
+
+  window.addEventListener("popstate", function (event) {
+    if (nav.skip > 0) { nav.skip -= 1; return; }
+    var target = (event.state && event.state.fx) || 0;
+    if (target < nav.depth) {
+      nav.depth = target;
+      var back = document.querySelector(".st-key-back button");
+      if (back && !back.disabled) back.click();
+    } else if (target > nav.depth) {
+      nav.skip += 1;
+      history.go(nav.depth - target);
+    }
+  });
+
+  if (window.fxPending !== undefined) window.fxSync(window.fxPending);
 })();
 </script>
 """
@@ -894,8 +997,13 @@ class AppView:
             gold_deep=ornament["gold_deep"], gold_shine=ornament["gold_shine"],
         ))
         # الخيار الأخير يسمح للسكربت يشتغل. آمن هنا لأنه كودنا، ما فيه شي من المستخدم.
+        # والسطر الثاني يرسل للمتصفح عدد الخطوات في سجل التنقل، عشان زر الرجوع في الجوال.
+        # يتغير بس لما يتغير العدد، فما يشتغل إلا وقت التنقل.
+        depth = len(st.session_state.get("history") or [])
         with st.container(key="fx_script"):
             st.html(SCRIPT, unsafe_allow_javascript=True)
+            st.html(f"<script>window.fxSync ? window.fxSync({depth}) "
+                    f": (window.fxPending = {depth});</script>", unsafe_allow_javascript=True)
 
     def _build_database(self):
         try:
@@ -943,6 +1051,7 @@ class AppView:
                       on_click=go_to, args=(None,), width="stretch")
             st.button("خريطة انتشار المذاهب", key="open_map", icon=":material/public:",
                       on_click=go_to, args=(MAP_PAGE,), width="stretch")
+            html_block(SEPARATOR)
             mode = st.segmented_control(
                 "القسم", MODES, default=MODES[0], required=True,
                 label_visibility="collapsed", key="mode", width="stretch",
@@ -996,6 +1105,7 @@ class AppView:
     # ولو الباب ما تحته شي، نعرض الأبواب اللي جنبه عشان تتنقل بينها.
     def render_browser(self):
         self.render_back_button("back_sidebar", width="stretch")
+        html_block(SEPARATOR)
         current = open_chapter_id()
         path = self._controller.get_path(current) if current else []
 
@@ -1072,7 +1182,8 @@ class AppView:
                               on_click=go_to, args=(chapter_id, opinions[0].opinion_id),
                               type="tertiary")
                     for opinion in opinions:
-                        self._render_hit(opinion, results.excerpts[opinion.opinion_id], selected)
+                        self._render_hit(opinion, results.excerpts[opinion.opinion_id], selected,
+                                         results.query)
         elif not selected:
             st.warning("ما اخترت أي مذهب، فما نعرض أقوالاً. اختر مذهباً واحداً على الأقل من الشريط فوق.")
 
@@ -1081,7 +1192,9 @@ class AppView:
                        "نتيجة من كل نوع. حدد البحث أكثر.</div>")
 
     # قول واحد في النتائج: بطاقة بحبر أول مذهب مختار من مذاهبه، وفيها مذاهبه والمقتطف.
-    def _render_hit(self, opinion, excerpt, selected: list[int]):
+    # ولو المقتطف مقصوص، تحته زر "قراءة المزيد" يفتح القول كامل،
+    # وكلمة البحث مميزة في كل مكان جات فيه.
+    def _render_hit(self, opinion, excerpt, selected: list[int], query: str):
         ink = next((i for i in opinion.madhab_ids if i in selected), opinion.madhab_ids[0])
         madhabs = "".join(f"<span>{star(i)}{esc(self._madhabs[i].name)}</span>"
                           for i in opinion.madhab_ids)
@@ -1089,6 +1202,11 @@ class AppView:
         with st.container(key=f"hit-m{ink}-{opinion.opinion_id}"):
             html_block(f'<div class="fx-shared">{madhabs}</div>'
                        f'<div class="fx-excerpt">{esc(excerpt.before)}{match}{esc(excerpt.after)}</div>')
+            if excerpt.before.startswith("…") or excerpt.after.endswith("…"):
+                with st.expander("قراءة المزيد"):
+                    full = "".join(f"<mark>{esc(part)}</mark>" if is_match else esc(part)
+                                   for part, is_match in self._controller.marked(opinion.text, query))
+                    html_block(f'<div class="fx-excerpt">{full.strip().replace(chr(10), "<br>")}</div>')
 
     # ====================================================== المفضلة
     def render_bookmarks(self):
@@ -1184,9 +1302,11 @@ class AppView:
                               help="نبذة عن سيرته")
                     html_block('<em class="fx-tl-year">ت '
                                f"{to_arabic_digits(IMAM_DEATH_YEARS[madhab.madhab_id])}هـ</em>")
-        html_block('<p class="fx-hint">اضغط على اسم أي إمام لعرض نبذة عن سيرته وطريقته في الاستنباط.</p>')
+        html_block('<p class="fx-hint">اضغط على اسم أي إمام لعرض نبذة عن سيرته وطريقته في الاستنباط.</p>'
+                   + SEPARATOR)
         # البحث واختيار المذاهب بعد الأئمة مباشرة، لأنه أهم شي في التطبيق.
         self.render_finder()
+        html_block(SEPARATOR)
         # بطاقة كبيرة للخريطة، عشان تبان من أول نظرة.
         with st.container(border=True, key="map_card"):
             html_block(
