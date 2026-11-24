@@ -70,6 +70,35 @@ def test_madhab_without_quote_is_rejected():
     MapRegion("مكان", "XXX", OTHER_MADHAB_ID)
 
 
+# الكلام من موقع ما له صفحات، فلازم معه رابط الصفحة نفسها اللي فيها الكلام.
+def test_quote_needs_a_page_or_a_link():
+    with pytest.raises(ValueError):
+        MapRegion("مكان", "XXX", 3, quote="كلام")
+    MapRegion("مكان", "XXX", 3, quote="كلام", url="https://example.org/page")
+
+
+# الكتاب نوثّق منه برقم الصفحة، والموقع برابط من نفس الموقع.
+# كلام المواقع راجعناه يدوياً حرف حرف وقت إضافته، لأن صفحاتها تتغير مع الوقت.
+def test_sources_are_cited_the_right_way(atlas):
+    sources = atlas.get_sources()
+    for item in atlas.get_regions():
+        if not item.quote:
+            continue
+        source = sources[item.source_id]
+        if source.has_pages():
+            assert item.page and not item.url, item.name
+        else:
+            assert item.url.startswith(source.url_pattern + "/"), item.name
+            assert source.accessed, item.source_id
+
+
+# الدول اللي طلبناها بالاسم لازم تكون ملونة بمذهب.
+@pytest.mark.parametrize("country", ["TUR", "PAK", "BGD", "IND", "MYS", "IDN", "NGA", "UZB"])
+def test_large_muslim_countries_are_colored(atlas, country):
+    madhabs = [r.madhab_id for r in atlas.get_regions() if country in r.countries()]
+    assert madhabs and madhabs[0] != OTHER_MADHAB_ID
+
+
 # المستودع يعطي كل محافظة معرّفها، ويرجع لا شي لو ملف دولة ناقص.
 def test_shapes_get_ids_and_missing_file_gives_none(tmp_path):
     assert MapRepository(shapes_dir=tmp_path).get_shapes() is None

@@ -242,16 +242,18 @@ class Bookmark:
 
 
 # ============================================ المصادر خارج كتاب الجزيري
-# الخريطة ونبذة الأئمة لها مصادرها: كتب نوثّق منها بالصفحة، مثل الكتاب الأصلي.
+# الخريطة ونبذة الأئمة لها مصادرها: كتب نوثّق منها بالصفحة، مثل الكتاب الأصلي،
+# ومواقع إسلامية حديثة نوثّق منها برابط الصفحة نفسها، لأن الموقع ما له أرقام صفحات.
 @dataclass(frozen=True)
 class Source:
     # معرف قصير نربط به المناطق والسير بمصدرها.
     source_id: str
     title: str
     author: str
-    # سنة وفاة المؤلف بالهجري، عشان القارئ يعرف زمن الكلام.
+    # سنة وفاة المؤلف بالهجري، عشان القارئ يعرف زمن الكلام. صفر للمواقع.
     author_death_year: int
     # رابط أي صفحة في الكتاب، ومكان رقم الصفحة فيه بين قوسين معقوفين.
+    # الموقع: رابطه الرئيسي بدون قوسين، وكل منطقة معها رابط صفحتها.
     url_pattern: str
     # الفرق بين رقم الصفحة المطبوع ورقمها في الموقع، لأن بعض المواقع تعدّ المقدمات.
     page_offset: int = 0
@@ -259,15 +261,24 @@ class Source:
     short_name: str = ""
     # الناشر والطبعة، لو نعرفها بثقة.
     edition: str = ""
+    # تاريخ اطلاعنا على الموقع، لأن صفحات المواقع تتغير. الكتب ما تحتاجه.
+    accessed: str = ""
+
+    # الكتاب له صفحات مرقمة، والموقع ما له.
+    def has_pages(self) -> bool:
+        return "{page}" in self.url_pattern
 
     def page_url(self, page: int) -> str:
         return self.url_pattern.format(page=page - self.page_offset)
 
-    def citation(self, page: int) -> str:
-        return f"{self.author}، {self.title}، ص{to_arabic_digits(page)}"
+    def citation(self, page: int = 0) -> str:
+        base = f"{self.author}، {self.title}"
+        return f"{base}، ص{to_arabic_digits(page)}" if page else base
 
-    def short_citation(self, page: int) -> str:
-        return f"{self.short_name or self.author}، ص{to_arabic_digits(page)}"
+    # التوثيق القصير: اسم المؤلف والصفحة، أو اسم الموقع بس.
+    def short_citation(self, page: int = 0) -> str:
+        name = self.short_name or self.author
+        return f"{name}، ص{to_arabic_digits(page)}" if page else name
 
 
 # ================================================ نماذج خريطة المذاهب
@@ -297,13 +308,16 @@ class MapRegion:
     also: tuple[str, ...] = ()
     # مصدر الكلام. أغلب المناطق من كتاب تيمور.
     source_id: str = "taymur"
+    # رابط الصفحة اللي فيها الكلام، للمصادر اللي هي مواقع وما لها أرقام صفحات.
+    url: str = ""
 
     def __post_init__(self):
         if self.madhab_id != OTHER_MADHAB_ID and self.madhab_id not in VALID_MADHAB_IDS:
             raise ValueError(f"unknown madhab id {self.madhab_id} in {self.name}")
-        # كل لون له مصدر: لو المنطقة ملونة بمذهب، لازم معها كلام المؤلف وصفحته.
-        if self.madhab_id != OTHER_MADHAB_ID and not (self.quote and self.page):
-            raise ValueError(f"{self.name} has a madhab but no quote or page")
+        # كل لون له مصدر: لو المنطقة ملونة بمذهب، لازم معها الكلام حرفياً،
+        # ومعه مكانه: رقم صفحة في كتاب، أو رابط صفحة في موقع.
+        if self.madhab_id != OTHER_MADHAB_ID and not (self.quote and (self.page or self.url)):
+            raise ValueError(f"{self.name} has a madhab but no quote with a page or link")
 
     def is_partial(self) -> bool:
         return bool(self.units)

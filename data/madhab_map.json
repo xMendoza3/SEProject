@@ -18,6 +18,24 @@
    "page_offset": 6,
    "short_name": "الأشقر",
    "edition": "دار النفائس، الأردن، الطبعة الثانية، ١٤١٨هـ"
+  },
+  {
+   "source_id": "dawa",
+   "title": "صفحات المسلمين في دول العالم",
+   "author": "المستودع الدعوي الرقمي",
+   "author_death_year": 0,
+   "url_pattern": "https://dawa.center",
+   "short_name": "المستودع الدعوي",
+   "accessed": "2026-11-24"
+  },
+  {
+   "source_id": "wikipedia",
+   "title": "مقالة: مالكية",
+   "author": "ويكيبيديا العربية",
+   "author_death_year": 0,
+   "url_pattern": "https://ar.wikipedia.org",
+   "short_name": "ويكيبيديا",
+   "accessed": "2026-11-24"
   }
  ],
  "regions": [
@@ -85,7 +103,9 @@
   {
    "name": "فلسطين",
    "country": "PSE",
-   "also": ["ISR"],
+   "also": [
+    "ISR"
+   ],
    "madhab_id": 3,
    "quote": "ويغلب الشافعي على فلسطين، ويليه الحنبلي، فالحنفي، فالمالكي",
    "page": 87
@@ -259,9 +279,10 @@
    "name": "إيران",
    "country": "IRN",
    "madhab_id": 0,
-   "quote": "وفقه الشيعة معمول به في فارس وغيرها من البلدان",
-   "page": 86,
-   "note": "وقال المؤلف: والسنيون من أهل فارس أغلبهم شافعية وقليل منهم حنفية (ص٨٨)."
+   "quote": "وتشير إحصائيات رسمية إلى أن الشيعة يمثلون نسبة 89% من إجمالي سكان إيران",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/IR",
+   "note": "دولة أغلبها شيعة إمامية اثنا عشرية، وهو مذهب غير المذاهب الأربعة. وأهل السنة فيها أغلبهم شافعية وقليل منهم حنفية، كما قال تيمور (ص٨٨): «والسنيون من أهل فارس أغلبهم شافعية وقليل منهم حنفية»."
   },
   {
    "name": "عُمان",
@@ -424,6 +445,163 @@
    "page": 100,
    "source_id": "ashqar",
    "note": "من كتاب الأشقر، والكلام عن المذهب الحنفي. وذكر تيمور تركستان الشرقية، وهي اليوم داخل الصين (ص٨٨)."
+  },
+  {
+   "name": "كازاخستان",
+   "country": "KAZ",
+   "madhab_id": 1,
+   "quote": "فإن 70٪ من السكان هم من المسلمين الأحناف",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/KZ",
+   "note": "الرقم من تعداد سنة ٢٠٠٩، كما في المصدر."
+  },
+  {
+   "name": "أوزبكستان",
+   "country": "UZB",
+   "madhab_id": 1,
+   "quote": "ويذكر أن أكثر القرغيز والأوزبك هم مسلمون على المذهب الحنفي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/KG",
+   "note": "الكلام في صفحة قرغيزستان، وذكر فيه الأوزبك."
+  },
+  {
+   "name": "قرغيزستان",
+   "country": "KGZ",
+   "madhab_id": 1,
+   "quote": "ويذكر أن أكثر القرغيز والأوزبك هم مسلمون على المذهب الحنفي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/KG"
+  },
+  {
+   "name": "تركمانستان",
+   "country": "TKM",
+   "madhab_id": 1,
+   "quote": "ينتمي مسلمو تركمانستان إلى المذهب الحنفي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/TM"
+  },
+  {
+   "name": "الصومال",
+   "country": "SOM",
+   "madhab_id": 3,
+   "quote": "وأغلبهم من اتباع المذهب الشافعي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/SO"
+  },
+  {
+   "name": "إثيوبيا",
+   "country": "ETH",
+   "madhab_id": 3,
+   "quote": "وأكثر مسلمي إثيوبيا سنه شافعية وقلة منهم أحناف ومالكية",
+   "source_id": "dawa",
+   "url": "https://dawa.center/file/6240",
+   "note": "من مقال «أوضاع المسلمين بإثيوبيا» لعطا كنتول، في الموقع نفسه."
+  },
+  {
+   "name": "تنزانيا",
+   "country": "TZA",
+   "madhab_id": 3,
+   "quote": "وهم يتبعون المذهب الشافعي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/TZ"
+  },
+  {
+   "name": "جزر القمر",
+   "country": "COM",
+   "madhab_id": 3,
+   "quote": "والمسلمون في هذه البلاد يتبعون المذهب الشافعي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/KM"
+  },
+  {
+   "name": "جزر المالديف",
+   "country": "MDV",
+   "madhab_id": 3,
+   "quote": "في الدين الإسلامي لجميع أبناء هذا الشعب، وفي المذهب الشافعي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/MV"
+  },
+  {
+   "name": "موريتانيا",
+   "country": "MRT",
+   "madhab_id": 2,
+   "quote": "مع اختيار أغلبهم للفقه المالكي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/MR"
+  },
+  {
+   "name": "النيجر",
+   "country": "NER",
+   "madhab_id": 2,
+   "quote": "وهم يتبعون المذهب المالكي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/NE"
+  },
+  {
+   "name": "ساحل العاج",
+   "country": "CIV",
+   "madhab_id": 2,
+   "quote": "وأكثر المسلمين العاجيين يعتنقون المذهب المالكي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/CI"
+  },
+  {
+   "name": "غانا",
+   "country": "GHA",
+   "madhab_id": 2,
+   "quote": "وأغلبية المسلمين الغانيين اليوم هم من أهل السنة، ويتبعون المذهب المالكي",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/GH"
+  },
+  {
+   "name": "السنغال",
+   "country": "SEN",
+   "madhab_id": 2,
+   "quote": "كما ينتشر في دول السنغال وتشاد ومالي والنيجر وشمال نيجيريا في غرب أفريقيا",
+   "source_id": "wikipedia",
+   "url": "https://ar.wikipedia.org/wiki/مالكية"
+  },
+  {
+   "name": "مالي",
+   "country": "MLI",
+   "madhab_id": 2,
+   "quote": "كما ينتشر في دول السنغال وتشاد ومالي والنيجر وشمال نيجيريا في غرب أفريقيا",
+   "source_id": "wikipedia",
+   "url": "https://ar.wikipedia.org/wiki/مالكية"
+  },
+  {
+   "name": "تشاد",
+   "country": "TCD",
+   "madhab_id": 2,
+   "quote": "كما ينتشر في دول السنغال وتشاد ومالي والنيجر وشمال نيجيريا في غرب أفريقيا",
+   "source_id": "wikipedia",
+   "url": "https://ar.wikipedia.org/wiki/مالكية"
+  },
+  {
+   "name": "نيجيريا",
+   "country": "NGA",
+   "madhab_id": 2,
+   "quote": "كما ينتشر في دول السنغال وتشاد ومالي والنيجر وشمال نيجيريا في غرب أفريقيا",
+   "source_id": "wikipedia",
+   "url": "https://ar.wikipedia.org/wiki/مالكية",
+   "note": "المصدر ذكر شمال نيجيريا، وهو أكثرها مسلمين، فلوّنا الدولة كلها من باب التقريب."
+  },
+  {
+   "name": "الإمارات",
+   "country": "ARE",
+   "madhab_id": 2,
+   "quote": "والإمارات العربية المتحدة والكويت وأجزاء من السعودية",
+   "source_id": "wikipedia",
+   "url": "https://ar.wikipedia.org/wiki/مالكية"
+  },
+  {
+   "name": "أذربيجان",
+   "country": "AZE",
+   "madhab_id": 0,
+   "quote": "85% من هؤلاء هم من الشيعة، وما يقارب 15٪ فقط هم من السنة",
+   "source_id": "dawa",
+   "url": "https://dawa.center/country/AZ",
+   "note": "أغلب مسلميها شيعة، وهو مذهب غير المذاهب الأربعة. وما ذكر المصدر مذهب أهل السنة فيها."
   }
  ],
  "mentions": [

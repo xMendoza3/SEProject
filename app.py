@@ -1183,7 +1183,7 @@ class AppView:
                               type="tertiary")
                     for opinion in opinions:
                         self._render_hit(opinion, results.excerpts[opinion.opinion_id], selected,
-                                         results.query)
+                                         results.query, results.titles.get(chapter_id, ""))
         elif not selected:
             st.warning("ما اخترت أي مذهب، فما نعرض أقوالاً. اختر مذهباً واحداً على الأقل من الشريط فوق.")
 
@@ -1192,9 +1192,10 @@ class AppView:
                        "نتيجة من كل نوع. حدد البحث أكثر.</div>")
 
     # قول واحد في النتائج: بطاقة بحبر أول مذهب مختار من مذاهبه، وفيها مذاهبه والمقتطف.
-    # ولو المقتطف مقصوص، تحته زر "قراءة المزيد" يفتح القول كامل،
-    # وكلمة البحث مميزة في كل مكان جات فيه.
-    def _render_hit(self, opinion, excerpt, selected: list[int], query: str):
+    # تحته دائماً زر "عرض المزيد" يفتح القول كامل، وكلمة البحث مميزة في كل مكان جات فيه.
+    # وتحته سطر فيه مكان القول في الكتاب، ورابط صفحته في الشاملة عشان القارئ يتحقق بنفسه،
+    # وزر نسخ القول كامل مع عنوان بابه ومصدره، بدون ما يحتاج يفتح "عرض المزيد".
+    def _render_hit(self, opinion, excerpt, selected: list[int], query: str, chapter_title: str):
         ink = next((i for i in opinion.madhab_ids if i in selected), opinion.madhab_ids[0])
         madhabs = "".join(f"<span>{star(i)}{esc(self._madhabs[i].name)}</span>"
                           for i in opinion.madhab_ids)
@@ -1202,11 +1203,21 @@ class AppView:
         with st.container(key=f"hit-m{ink}-{opinion.opinion_id}"):
             html_block(f'<div class="fx-shared">{madhabs}</div>'
                        f'<div class="fx-excerpt">{esc(excerpt.before)}{match}{esc(excerpt.after)}</div>')
-            if excerpt.before.startswith("…") or excerpt.after.endswith("…"):
-                with st.expander("قراءة المزيد"):
-                    full = "".join(f"<mark>{esc(part)}</mark>" if is_match else esc(part)
-                                   for part, is_match in self._controller.marked(opinion.text, query))
-                    html_block(f'<div class="fx-excerpt">{full.strip().replace(chr(10), "<br>")}</div>')
+            with st.expander("عرض المزيد"):
+                full = "".join(f"<mark>{esc(part)}</mark>" if is_match else esc(part)
+                               for part, is_match in self._controller.marked(opinion.text, query))
+                html_block(f'<div class="fx-excerpt">{full.strip().replace(chr(10), "<br>")}</div>')
+            page = self._controller.get_page(opinion.page_id)
+            with st.container(horizontal=True, vertical_alignment="center", gap="medium"):
+                if page:
+                    place = "في الحاشية" if opinion.location == "footnote" else "في المتن"
+                    # بعرض كلامه بس، عشان زر النسخ يجي جنبه في نفس السطر.
+                    st.markdown(
+                        f'<div class="fx-foot"><span>{page.citation()}، {place}</span>'
+                        f'<a href="{page.shamela_url()}" target="_blank">انتقل إلى الشاملة</a></div>',
+                        unsafe_allow_html=True, width="content",
+                    )
+                copy_button(self._controller.quote_opinion(opinion, chapter_title))
 
     # ====================================================== المفضلة
     def render_bookmarks(self):
@@ -1287,7 +1298,7 @@ class AppView:
             '<section class="fx-hero">'
             f'<h1><span class="fx-gilded">المستكشف الفقهي المقارن</span></h1>{BAND}'
             "<p>اقرأ أقوال المذاهب الأربعة في المسألة الواحدة جنباً إلى جنب، "
-            "كما نقلها الجزيري في كتابه الفقه على المذاهب الأربعة، "
+            "كما نقلها عبد الرحمن بن محمد عوض الجزيري في كتابه الفقه على المذاهب الأربعة، "
             "ومع كل قول مكانه في الكتاب.</p>"
             "</section>"
         )
@@ -1333,6 +1344,9 @@ class AppView:
     def render_map(self):
         madhab_map = self._controller.get_madhab_map()
         taymur, ashqar = madhab_map.sources["taymur"], madhab_map.sources["ashqar"]
+        # المصادر اللي هي مواقع، مثل المستودع الدعوي: نذكرها بأسمائها بعد الكتابين.
+        sites = "، و".join(f"«{esc(s.author)}»" for s in madhab_map.sources.values()
+                           if not s.has_pages())
         n = to_arabic_digits
         theme = "dark" if st.context.theme.type == "dark" else "light"
         palette = MAP_COLORS[theme]
@@ -1341,7 +1355,8 @@ class AppView:
             f'<p class="fx-map-lead">كما وصفه {esc(taymur.author)} '
             f"(ت {n(taymur.author_death_year)}هـ) في خاتمة كتابه "
             f"«{esc(taymur.title)}»، وأضفنا ما زاده {esc(ashqar.author)} في كتابه "
-            f"«{esc(ashqar.title)}». دوّر الكرة بالسحب، وكبّرها بعجلة الفأرة، "
+            f"«{esc(ashqar.title)}». والدول اللي ما ذكرها الكتابان أخذنا مذهبها من {sites}، "
+            "ووصفها لليوم. دوّر الكرة بالسحب، وكبّرها بعجلة الفأرة، "
             "ووقف على أي منطقة عشان تشوف كلام المؤلف.</p>"
             + self._map_legend(palette)
         )
@@ -1371,7 +1386,7 @@ class AppView:
             DIVIDER +
             '<p class="fx-note">'
             "الألوان تبين مذهب أهل السنة الغالب في المنطقة، لا نسبتهم من السكان، "
-            "والوصف لزمان المؤلف قبل نحو مئة سنة. "
+            "ووصف تيمور لزمانه قبل نحو مئة سنة، ووصف المواقع لليوم. "
             "والمؤلف نفسه قال إنه اعتمد في كثير منه على مصادر أجنبية لقلة المصادر العربية "
             f'(<a href="{taymur.page_url(86)}" target="_blank">ص{n(86)}</a>). '
             "وتقسيم مصر والسعودية والعراق اجتهاد منا في ربط كلامه بالمحافظات اليوم، "
@@ -1400,29 +1415,33 @@ class AppView:
         return self._madhabs[madhab_id].name
 
     # اللي يطلع لما توقف على منطقة: اسمها، ومذهبها، وكلام المؤلف ومصدره وصفحته.
+    # والمنطقة باللون الخامس تعرض ملاحظتنا كمان، لأنها تشرح ليش ما تلونت، مثل إيران.
     def _region_hover(self, region, sources: dict) -> str:
         lines = [f"<b>{esc(region.name)}</b>", self._madhab_label(region.madhab_id)]
         if region.quote:
             lines += short_lines(f"«{esc(region.quote)}»")
             lines.append(sources[region.source_id].short_citation(region.page))
-        elif region.note:
+        if region.note and (not region.quote or region.madhab_id == OTHER_MADHAB_ID):
             lines += short_lines(esc(region.note))
         return "<br>".join(lines)
 
     # جدول كل المناطق: المذهب، وكلام المؤلف، ورابط الصفحة في الشاملة، وتفسيرنا.
     # وتحته المناطق اللي ذكرها المؤلف وما لوّناها، مع السبب.
     def _map_table(self, madhab_map) -> str:
-        def page_link(page: int, source_id: str) -> str:
+        # الكتاب: رابط الصفحة برقمها. الموقع: رابط الصفحة نفسها اللي فيها الكلام.
+        def page_link(page: int, source_id: str, url: str = "") -> str:
+            source = madhab_map.sources[source_id]
+            if url:
+                return f'<a href="{esc(url)}" target="_blank">{source.short_citation()}</a>'
             if not page:
                 return ""
-            source = madhab_map.sources[source_id]
             return (f'<a href="{source.page_url(page)}" target="_blank">'
                     f"{source.short_citation(page)}</a>")
 
         regions = sorted(madhab_map.regions, key=lambda r: (r.madhab_id or 9, r.name))
         rows = "".join(
             f"<tr><td>{esc(r.name)}</td><td>{self._madhab_label(r.madhab_id)}</td>"
-            f'<td class="fx-q">{esc(r.quote)}</td><td>{page_link(r.page, r.source_id)}</td>'
+            f'<td class="fx-q">{esc(r.quote)}</td><td>{page_link(r.page, r.source_id, r.url)}</td>'
             f'<td class="fx-n">{esc(r.note)}</td></tr>'
             for r in regions
         )
